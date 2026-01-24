@@ -17,6 +17,10 @@
 #include "tf2_ros/transform_listener.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
+#include "tf2/LinearMath/Quaternion.h"
+#include "tf2/utils.h"
+
+
 using namespace std::chrono_literals;
 
 class CenterlineNav2Autonomy : public rclcpp::Node
@@ -39,6 +43,12 @@ public:
     this->declare_parameter<double>("min_goal_separation_m", 0.2);
     this->declare_parameter<double>("path_stale_sec", 0.25);
 
+    //new smoothing params
+    this->declare_parameter<bool>("use_tangent_orientation", true);
+    this->declare_parameter<double>("yaw_smooth_alpha", 0.85);     // 0=no smoothing, 0.85 good start
+    this->declare_parameter<double>("min_tangent_norm", 1e-3);     // avoid degeneracy
+
+
     centerline_topic_ = this->get_parameter("centerline_topic").as_string();
     global_frame_ = this->get_parameter("global_frame").as_string();
     robot_frame_ = this->get_parameter("robot_frame").as_string();
@@ -46,6 +56,12 @@ public:
     goal_update_hz_ = this->get_parameter("goal_update_hz").as_double();
     min_goal_sep_m_ = this->get_parameter("min_goal_separation_m").as_double();
     path_stale_sec_ = this->get_parameter("path_stale_sec").as_double();
+
+    // load new params
+    use_tangent_orientation_ = this->get_parameter("use_tangent_orientation").as_bool();
+    yaw_smooth_alpha_ = this->get_parameter("yaw_smooth_alpha").as_double();
+    min_tangent_norm_ = this->get_parameter("min_tangent_norm").as_double();
+
 
     // Sub to centerline path
     path_sub_ = this->create_subscription<nav_msgs::msg::Path>(
@@ -70,6 +86,26 @@ public:
   }
 
 private:
+
+  static double wrapPi(double a)
+  {
+    while (a > M_PI) a -= 2.0 * M_PI;
+    while (a < -M_PI) a += 2.0 * M_PI;
+    return a;
+  }
+
+  static geometry_msgs::msg::Quaternion quatFromYaw(double yaw)
+  {
+    tf2::Quaternion q;
+    q.setRPY(0.0, 0.0, yaw);
+    geometry_msgs::msg::Quaternion out;
+    out.x = q.x();
+    out.y = q.y();
+    out.z = q.z();
+    out.w = q.w();
+    return out;
+  }
+
   void onPath(const nav_msgs::msg::Path::SharedPtr msg)
   {
     std::lock_guard<std::mutex> lk(mutex_);
@@ -115,6 +151,14 @@ private:
       path_copy = last_path_;
       path_time = last_path_time_;
     }
+
+    // check orientation changes
+    if (!path_copy.header.frame_id.empty() && path_copy.header.frame_id != robot_frame_) {
+      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+                          "Centerline path frame_id='%s' != robot_frame='%s' (check lane_detector_dual path_frame param).",
+                          path_copy.header.frame_id.c_str(), robot_frame_.c_str());
+    }
+
 
     if (path_copy.poses.size() < 5) {
       RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
@@ -163,31 +207,77 @@ private:
   }
 
   std::optional<geometry_msgs::msg::PoseStamped> pickLookaheadPose(
-    const nav_msgs::msg::Path & path, double lookahead_m)
-  {
-    if (path.poses.size() < 2) return std::nullopt;
+      const nav_msgs::msg::Path & path, double lookahead_m)
+    {
+      if (path.poses.size() < 3) return std::nullopt;
 
-    // We assume the path frame is robot-relative (base_link). If it's already base_link, great.
-    // Walk forward along the sequence and accumulate distance.
-    double acc = 0.0;
-    for (size_t i = 1; i < path.poses.size(); ++i) {
-      const auto & p0 = path.poses[i - 1].pose.position;
-      const auto & p1 = path.poses[i].pose.position;
-      const double ds = std::hypot(p1.x - p0.x, p1.y - p0.y);
-      acc += ds;
-      if (acc >= lookahead_m) {
-        auto goal = path.poses[i];
-        // Ensure stamp is "now" to avoid TF-time complaints
-        goal.header.stamp = this->now();
+      // Walk along arc length to find the lookahead index
+      double acc = 0.0;
+      size_t chosen = path.poses.size() - 1; // fallback
+
+      for (size_t i = 1; i < path.poses.size(); ++i) {
+        const auto & p0 = path.poses[i - 1].pose.position;
+        const auto & p1 = path.poses[i].pose.position;
+        acc += std::hypot(p1.x - p0.x, p1.y - p0.y);
+        if (acc >= lookahead_m) {
+          chosen = i;
+          break;
+        }
+      }
+
+      auto goal = path.poses[chosen];
+      goal.header.stamp = this->now();
+
+      if (!use_tangent_orientation_) {
+        // leave orientation as-is (though your lane detector publishes identity)
         return goal;
       }
+
+      // Choose neighbor points to compute tangent direction robustly
+      size_t i0, i1;
+      if (chosen == 0) {
+        i0 = 0; i1 = 1;
+      } else if (chosen >= path.poses.size() - 1) {
+        i0 = path.poses.size() - 2; i1 = path.poses.size() - 1;
+      } else {
+        i0 = chosen - 1; i1 = chosen + 1;
+      }
+
+      const auto & a = path.poses[i0].pose.position;
+      const auto & b = path.poses[i1].pose.position;
+
+      const double dx = b.x - a.x;
+      const double dy = b.y - a.y;
+
+      // If tangent is degenerate, point toward the goal in robot frame as fallback
+      double yaw = 0.0;
+      const double n = std::hypot(dx, dy);
+
+      if (std::isfinite(dx) && std::isfinite(dy) && (n > min_tangent_norm_)) {
+        yaw = std::atan2(dy, dx);
+      } else {
+        const double gx = goal.pose.position.x;
+        const double gy = goal.pose.position.y;
+        const double gn = std::hypot(gx, gy);
+        if (gn > min_tangent_norm_) yaw = std::atan2(gy, gx);
+      }
+
+      // Smooth yaw over time to avoid flicker from noisy centerline
+      yaw = wrapPi(yaw);
+      const double a_s = std::max(0.0, std::min(0.99, yaw_smooth_alpha_));
+
+      if (!has_last_yaw_) {
+        last_yaw_ = yaw;
+        has_last_yaw_ = true;
+      } else {
+        const double err = wrapPi(yaw - last_yaw_);
+        last_yaw_ = wrapPi(last_yaw_ + (1.0 - a_s) * err);
+      }
+
+      goal.pose.orientation = quatFromYaw(last_yaw_);
+      return goal;
     }
 
-    // If path is shorter than lookahead, use the last pose
-    auto goal = path.poses.back();
-    goal.header.stamp = this->now();
-    return goal;
-  }
 
   void sendGoal(const geometry_msgs::msg::PoseStamped & goal)
   {
@@ -248,6 +338,15 @@ private:
   std::mutex mutex_;
   nav_msgs::msg::Path last_path_;
   rclcpp::Time last_path_time_{0, 0, RCL_ROS_TIME};
+
+  // orientation behavior
+  bool use_tangent_orientation_{true};
+  double yaw_smooth_alpha_{0.85};
+  double min_tangent_norm_{1e-3};
+
+  bool has_last_yaw_{false};
+  double last_yaw_{0.0};
+
 
   bool enabled_{false};
   bool has_last_goal_{false};

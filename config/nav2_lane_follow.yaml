@@ -15,18 +15,19 @@ controller_server:
     controller_plugins: ["FollowPath"]
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
-      desired_linear_vel: .35
-      lookahead_dist: 4.0
-      min_lookahead_dist: 1.0
-      max_lookahead_dist: 5.0
+      use_rotate_to_heading: false
+      desired_linear_vel: 1.7 # about 4mph
+      lookahead_dist: 6.0
+      min_lookahead_dist: 3.0
+      max_lookahead_dist: 8.0
       use_velocity_scaled_lookahead_dist: true
       rotate_to_heading_angular_vel: 1.0
       rotate_to_heading_min_angle: 0.785
       allow_reversing: false
       max_angular_accel: 2.0
       max_linear_accel: 1.0
-      regulated_linear_scaling_min_radius: 1.0
-      regulated_linear_scaling_min_speed: 0.15
+      regulated_linear_scaling_min_radius: 1.5
+      regulated_linear_scaling_min_speed: 0.10
 
 velocity_smoother:
   ros__parameters:
