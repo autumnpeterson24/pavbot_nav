@@ -48,6 +48,18 @@ public:
     this->declare_parameter<double>("yaw_smooth_alpha", 0.85);     // 0=no smoothing, 0.85 good start
     this->declare_parameter<double>("min_tangent_norm", 1e-3);     // avoid degeneracy
 
+    // new paramter
+    this->declare_parameter<int>("min_path_points", 5);
+    this->declare_parameter<double>("min_goal_update_sec", 0.2);
+    this->declare_parameter<double>("replan_when_dist_to_goal_lt_m", 1.5);
+    this->declare_parameter<double>("force_replan_if_goal_moves_m", 4.0);
+    this->declare_parameter<double>("goal_progress_timeout_sec", 3.0);
+
+
+    min_goal_update_sec_ = this->get_parameter("min_goal_update_sec").as_double();
+    min_path_points_ = this->get_parameter("min_path_points").as_int();
+
+
 
     centerline_topic_ = this->get_parameter("centerline_topic").as_string();
     global_frame_ = this->get_parameter("global_frame").as_string();
@@ -61,6 +73,11 @@ public:
     use_tangent_orientation_ = this->get_parameter("use_tangent_orientation").as_bool();
     yaw_smooth_alpha_ = this->get_parameter("yaw_smooth_alpha").as_double();
     min_tangent_norm_ = this->get_parameter("min_tangent_norm").as_double();
+
+    replan_when_dist_to_goal_lt_m_ = this->get_parameter("replan_when_dist_to_goal_lt_m").as_double();
+    force_replan_if_goal_moves_m_  = this->get_parameter("force_replan_if_goal_moves_m").as_double();
+    goal_progress_timeout_sec_     = this->get_parameter("goal_progress_timeout_sec").as_double();
+
 
 
     // Sub to centerline path
@@ -106,8 +123,14 @@ private:
     return out;
   }
 
-  void onPath(const nav_msgs::msg::Path::SharedPtr msg)
-  {
+  void onPath(const nav_msgs::msg::Path::SharedPtr msg) {
+    // Ignore empty / too-short paths so we keep the last usable one briefly
+    if ((int)msg->poses.size() < min_path_points_) {
+      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+                          "Ignoring short centerline (N=%zu). Keeping last valid path.", msg->poses.size());
+      return;
+    }
+
     std::lock_guard<std::mutex> lk(mutex_);
     last_path_ = *msg;
     last_path_time_ = this->now();
@@ -154,13 +177,15 @@ private:
 
     // check orientation changes
     if (!path_copy.header.frame_id.empty() && path_copy.header.frame_id != robot_frame_) {
-      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-                          "Centerline path frame_id='%s' != robot_frame='%s' (check lane_detector_dual path_frame param).",
-                          path_copy.header.frame_id.c_str(), robot_frame_.c_str());
+      RCLCPP_WARN_THROTTLE(
+        this->get_logger(), *this->get_clock(), 2000,
+        "Centerline frame_id='%s' differs from robot_frame='%s'. This is OK if TF exists from '%s' to '%s'.",
+        path_copy.header.frame_id.c_str(), robot_frame_.c_str(),
+        path_copy.header.frame_id.c_str(), global_frame_.c_str());
     }
 
 
-    if (path_copy.poses.size() < 5) {
+    if (path_copy.poses.size() < static_cast<std::size_t>(min_path_points_)) {
       RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
                            "Centerline path too short / not received yet.");
       return;
@@ -201,7 +226,12 @@ private:
       }
     }
 
+    // added min goal update period
+    const double dt_goal = (this->now() - last_goal_send_time_).seconds();
+    if (dt_goal < min_goal_update_sec_) return;
+
     sendGoal(goal_global);
+    last_goal_send_time_ = this->now(); 
     last_goal_global_ = goal_global;
     has_last_goal_ = true;
   }
@@ -322,6 +352,21 @@ private:
   double goal_update_hz_{2.0};
   double min_goal_sep_m_{1.0};
   double path_stale_sec_{0.5};
+
+  //new params
+  int min_path_points_{5};
+  rclcpp::Time last_goal_send_time_{0, 0, RCL_ROS_TIME};
+  double min_goal_update_sec_{0.2};
+
+  double replan_when_dist_to_goal_lt_m_{1.5};
+  double force_replan_if_goal_moves_m_{4.0};
+  double goal_progress_timeout_sec_{3.0};
+
+  double last_dist_to_goal_{1e9};
+  rclcpp::Time last_progress_time_{0, 0, RCL_ROS_TIME};
+
+
+
 
   // ROS
   rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr path_sub_;

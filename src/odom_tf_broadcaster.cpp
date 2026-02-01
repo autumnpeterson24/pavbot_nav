@@ -38,7 +38,7 @@ private:
     geometry_msgs::msg::TransformStamped tf;
 
     // Use odom message time for TF
-    tf.header.stamp = this->get_clock()->now();
+    tf.header.stamp = this->now();
 
     // Enforce frame IDs even if bridge leaves them empty / inconsistent
     tf.header.frame_id = odom_frame_;

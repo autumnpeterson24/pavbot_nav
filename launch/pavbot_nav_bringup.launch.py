@@ -15,6 +15,7 @@ from ament_index_python.packages import get_package_share_directory
 import os
 
 
+
 def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time")
     nav2_params = LaunchConfiguration("nav2_params")
@@ -55,10 +56,10 @@ def generate_launch_description():
             name="odom_tf_broadcaster",
             output="screen",
             parameters=[{
-                "use_sim_time": True,
+                "use_sim_time": use_sim_time,
                 "odom_topic": "/odom",
-                "odom_frame": "odom",
-                "base_frame": "base_link",
+                "odom_frame": "pavbot_test/odom",
+                "base_frame": "pavbot_test/base_link",
             }],
         ),
 
@@ -70,8 +71,8 @@ def generate_launch_description():
             parameters=[{
                 "use_sim_time": use_sim_time,
                 "centerline_topic": "/lanes/centerline",
-                "global_frame": "odom",
-                "robot_frame": "base_link",
+                "global_frame": "pavbot_test/odom",
+                "robot_frame": "pavbot_test/base_link",
                 "lookahead_m": 6.0,
                 "goal_update_hz": 2.0,
                 "min_goal_separation_m": 1.0,
