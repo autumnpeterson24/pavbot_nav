@@ -73,7 +73,7 @@ def generate_launch_description():
                 "centerline_topic": "/lanes/centerline",
                 "global_frame": "pavbot_test/odom",
                 "robot_frame": "pavbot_test/base_link",
-                "lookahead_m": 6.0,
+                "lookahead_m": 4.0,
                 "goal_update_hz": 10.0,
                 "min_goal_separation_m": 1.0,
                 "path_stale_sec": 0.5,
