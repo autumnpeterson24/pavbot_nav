@@ -18,10 +18,10 @@ controller_server:
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
       use_rotate_to_heading: false
-      desired_linear_vel: 0.8 # about 4mph
-      lookahead_dist: 4.0
+      desired_linear_vel: 1.8 # about 4mph
+      lookahead_dist: 6.0
       min_lookahead_dist: 2.0
-      max_lookahead_dist: 6.0
+      max_lookahead_dist: 8.0
       use_velocity_scaled_lookahead_dist: true
       rotate_to_heading_angular_vel: 1.0
       rotate_to_heading_min_angle: 0.785
@@ -45,7 +45,7 @@ velocity_smoother:
     feedback: "OPEN_LOOP"
 
     # Limits (tune later)
-    max_velocity: [1.0, 0.0, 1.0]
+    max_velocity: [1.9, 0.0, 1.9]
     min_velocity: [-0.1, 0.0, -1.5]
     max_accel: [1.0, 0.0, 2.0]
     max_decel: [-1.0, 0.0, -2.0]
