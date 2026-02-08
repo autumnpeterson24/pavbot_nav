@@ -1,36 +1,64 @@
 bt_navigator:
   ros__parameters:
     use_sim_time: true
-    global_frame: pavbot_test/odom
-    robot_base_frame: pavbot_test/base_link
+    global_frame: odom
+    robot_base_frame: base_link
     odom_frame: odom
 
 
 controller_server:
   ros__parameters:
     use_sim_time: true
-    controller_frequency: 30.0
-
-    # Publish controller commands here (NOT directly to cmd_vel)
+    controller_frequency: 20.0
     cmd_vel_topic: "cmd_vel_nav"
 
     controller_plugins: ["FollowPath"]
     FollowPath:
-      plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
-      use_rotate_to_heading: false
-      desired_linear_vel: 1.5 # about 4mph
-      lookahead_dist: 4.0
-      min_lookahead_dist: 2.0
-      max_lookahead_dist: 6.0
-      use_velocity_scaled_lookahead_dist: true
-      rotate_to_heading_angular_vel: 1.0
-      rotate_to_heading_min_angle: 0.785
-      allow_reversing: false
-      max_angular_accel: 2.0
-      max_linear_accel: 1.0
-      regulated_linear_scaling_min_radius: 2.5 # huge slowdown on curves
-      regulated_linear_scaling_min_speed: 0.25
-      deadband_velocity: [0.02, 0.0, 0.08] # ignore tiny linear below 0.02, 0.0, 0.08
+      plugin: "nav2_mppi_controller::MPPIController"
+
+      # Timing / rollout
+      time_steps: 56
+      model_dt: 0.05
+      batch_size: 2000
+      iteration_count: 1
+
+      # Limits for pavbot
+      vx_max: 0.8
+      vx_min: -0.2 # can back up now
+      wz_max: 2.2
+
+      # Noise (bigger = explores more)
+      vx_std: 0.35
+      wz_std: 0.8
+
+      # Critics = how it scores trajectories
+      critics: ["ConstraintCritic", "ObstaclesCritic", "PathAlignCritic", "PathFollowCritic", "GoalCritic"]
+
+      ConstraintCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 4.0
+
+      ObstaclesCritic:
+        enabled: true
+        cost_power: 1
+        repulsion_weight: 3.0
+        critical_weight: 80.0
+        collision_cost: 100000.0
+        collision_margin_distance: 0.5
+
+      PathAlignCritic:
+        enabled: true
+        weight: 8.0
+
+      PathFollowCritic:
+        enabled: true
+        weight: 12.0
+
+      GoalCritic:
+        enabled: true
+        weight: 5.0
+
 
 velocity_smoother:
   ros__parameters:
@@ -67,8 +95,8 @@ planner_server:
 behavior_server:
   ros__parameters:
     use_sim_time: true
-    global_frame: pavbot_test/odom
-    robot_base_frame: pavbot_test/base_link
+    global_frame: odom
+    robot_base_frame: base_link
     odom_frame: odom
     behavior_plugins: ["spin", "backup", "drive_on_heading", "wait"]
     spin:
@@ -83,30 +111,54 @@ behavior_server:
 local_costmap:
   local_costmap:
     ros__parameters:
-      use_sim_time: true
-      global_frame: pavbot_test/odom
-      robot_base_frame: pavbot_test/base_link
-      odom_frame: odom
-      rolling_window: true
-      width: 8
-      height: 8
-      resolution: 0.05
       update_frequency: 10.0
       publish_frequency: 5.0
       robot_radius: 0.45
-      plugins: ["inflation_layer"]
+      always_send_full_costmap: true
+      # (optional but nice)
+      transform_tolerance: 0.2
+      use_sim_time: true
+      global_frame: odom
+      robot_base_frame: base_link
+      rolling_window: true
+      width: 12
+      height: 12
+      resolution: 0.05
+
+      plugins: ["potholes", "inflation_layer"]
+
+      potholes:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: true
+        observation_sources: pothole_cloud
+        combination_method: 1  # max
+        track_unknown_space: false
+
+        pothole_cloud:
+          observation_persistence: 1.5   # seconds (try 2.0 if needed)
+          expected_update_rate: 0.0
+          topic: /potholes/points
+          data_type: "PointCloud2"
+          marking: true
+          clearing: false          # potholes are not “cleared” by raytracing here
+          obstacle_max_range: 20.0
+          obstacle_min_range: 0.0
+          min_obstacle_height: -0.2
+          max_obstacle_height:  0.2
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.55
-        cost_scaling_factor: 2.5
+        enabled: true
+        inflation_radius: 1.0      # pothole_radius (0.3048) + safety margin + half footprint-ish
+        cost_scaling_factor: 5.0
+
 
 global_costmap:
   global_costmap:
     ros__parameters:
       use_sim_time: true
-      global_frame: pavbot_test/odom
-      robot_base_frame: pavbot_test/base_link
+      global_frame: odom
+      robot_base_frame: base_link
       rolling_window: true
       width: 20
       height: 20
