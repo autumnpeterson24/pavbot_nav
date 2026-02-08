@@ -1,6 +1,10 @@
 """
 LAUNCH:
 ros2 service call /autonomy/set_enabled std_srvs/srv/SetBool "{data: true}"
+
+RUN RVIZ WITH THIS:
+ros2 run rviz2 rviz2 --ros-args -p use_sim_time:=true
+
 """
 
 from launch import LaunchDescription
@@ -102,24 +106,6 @@ def generate_launch_description():
                 "odom_frame": "odom",
                 "base_frame": "base_link",
             }],
-        ),
-
-        # --- 2.5) Pothole points bridge (publish /potholes/points for costmap) ---
-        Node(
-            package="pavbot_vision",
-            executable="pothole_points_bridge",
-            name="pothole_points_bridge",
-            namespace=namespace,
-            output="screen",
-            parameters=[{
-                "use_sim_time": use_sim_time,
-
-
-                # "input_topic": "/potholes/detections",
-                # "output_topic": "/potholes/points",
-                # "base_frame": "base_link",
-            }],
-            arguments=["--ros-args", "--log-level", log_level],
         ),
 
         # --- 3) Centerline -> Nav2 goals ---

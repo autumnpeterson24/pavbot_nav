@@ -42,22 +42,22 @@ controller_server:
       ObstaclesCritic:
         enabled: true
         cost_power: 1
-        repulsion_weight: 3.0
+        repulsion_weight: 6.0
         critical_weight: 80.0
         collision_cost: 100000.0
-        collision_margin_distance: 0.5
+        collision_margin_distance: 0.25
 
       PathAlignCritic:
         enabled: true
-        weight: 8.0
+        weight: 10.0
 
       PathFollowCritic:
         enabled: true
-        weight: 12.0
+        weight: 15.0
 
       GoalCritic:
         enabled: true
-        weight: 5.0
+        weight: 8.0
 
 
 velocity_smoother:
@@ -112,7 +112,7 @@ local_costmap:
   local_costmap:
     ros__parameters:
       update_frequency: 10.0
-      publish_frequency: 5.0
+      publish_frequency: 10.0
       robot_radius: 0.45
       always_send_full_costmap: true
       # (optional but nice)
@@ -135,22 +135,28 @@ local_costmap:
         track_unknown_space: false
 
         pothole_cloud:
-          observation_persistence: 1.5   # seconds (try 2.0 if needed)
+          observation_persistence: 0.0   # seconds
           expected_update_rate: 0.0
           topic: /potholes/points
           data_type: "PointCloud2"
           marking: true
-          clearing: false          # potholes are not “cleared” by raytracing here
-          obstacle_max_range: 20.0
-          obstacle_min_range: 0.0
-          min_obstacle_height: -0.2
-          max_obstacle_height:  0.2
+          clearing: true         # potholes are not “cleared” by raytracing here
+
+          obstacle_range: 20.0      # <-- IMPORTANT (accept marking out to 20m)
+          raytrace_range: 25.0       # clearing off anyway; ok to set 0
+
+          min_obstacle_height: -1.0
+          max_obstacle_height:  0.5
+
+          inf_is_valid: false
+          max_z: 0.5
+          min_z: -0.1
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
-        inflation_radius: 1.0      # pothole_radius (0.3048) + safety margin + half footprint-ish
-        cost_scaling_factor: 5.0
+        inflation_radius: 0.2      # pothole_radius (0.3048) + safety margin + half footprint-ish
+        cost_scaling_factor: 2.0
 
 
 global_costmap:
