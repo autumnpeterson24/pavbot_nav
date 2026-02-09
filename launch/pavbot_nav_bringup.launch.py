@@ -120,7 +120,7 @@ def generate_launch_description():
                 "centerline_topic": "/lanes/centerline",
                 "global_frame": "odom",
                 "robot_frame": "base_link",
-                "lookahead_m": 4.0,
+                "lookahead_m": 7.0,
                 "goal_update_hz": 10.0,
                 "min_goal_separation_m": 1.0,
                 "path_stale_sec": 0.5,

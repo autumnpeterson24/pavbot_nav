@@ -23,7 +23,7 @@ controller_server:
       iteration_count: 1
 
       # Limits for pavbot
-      vx_max: 0.8
+      vx_max: 1.5 # 3.35 mph
       vx_min: -0.2 # can back up now
       wz_max: 2.2
 
@@ -112,7 +112,7 @@ local_costmap:
   local_costmap:
     ros__parameters:
       update_frequency: 10.0
-      publish_frequency: 10.0
+      publish_frequency: 5.0
       robot_radius: 0.45
       always_send_full_costmap: true
       # (optional but nice)
@@ -135,15 +135,15 @@ local_costmap:
         track_unknown_space: false
 
         pothole_cloud:
-          observation_persistence: 0.0   # seconds
-          expected_update_rate: 0.0
+          observation_persistence: 0.5   # seconds
+          expected_update_rate: 10.0
           topic: /potholes/points
           data_type: "PointCloud2"
           marking: true
-          clearing: true         # potholes are not “cleared” by raytracing here
+          clearing: false        
 
           obstacle_range: 20.0      # <-- IMPORTANT (accept marking out to 20m)
-          raytrace_range: 25.0       # clearing off anyway; ok to set 0
+          raytrace_range: 0.0       # clearing off anyway; ok to set 0
 
           min_obstacle_height: -1.0
           max_obstacle_height:  0.5
@@ -155,7 +155,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
-        inflation_radius: 0.2      # pothole_radius (0.3048) + safety margin + half footprint-ish
+        inflation_radius: 0.6      # pothole_radius (0.3048) + safety margin + half footprint-ish
         cost_scaling_factor: 2.0
 
 
