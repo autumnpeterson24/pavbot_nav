@@ -42,10 +42,10 @@ controller_server:
       ObstaclesCritic:
         enabled: true
         cost_power: 1
-        repulsion_weight: 6.0
-        critical_weight: 80.0
+        repulsion_weight: 15.0 # more keep away
+        critical_weight: 120.0
         collision_cost: 100000.0
-        collision_margin_distance: 0.25
+        collision_margin_distance: 0.55
 
       PathAlignCritic:
         enabled: true
@@ -66,7 +66,7 @@ velocity_smoother:
 
     # Smoother subscribes to controller output...
     input_topic: "cmd_vel_nav"
-    # ...and publishes to the robot
+    # publishes to the robot
     output_topic: "cmd_vel"
 
     smoothing_frequency: 30.0
@@ -113,7 +113,10 @@ local_costmap:
     ros__parameters:
       update_frequency: 10.0
       publish_frequency: 5.0
-      robot_radius: 0.45
+      footprint: "[[-0.5, -0.35], [0.5, -0.35], [0.5, 0.35], [-0.5, 0.35]]"
+      footprint_padding: 0.2
+# (and remove robot_radius)
+      #robot_radius: 0.45
       always_send_full_costmap: true
       # (optional but nice)
       transform_tolerance: 0.2
@@ -121,11 +124,34 @@ local_costmap:
       global_frame: odom
       robot_base_frame: base_link
       rolling_window: true
-      width: 12
-      height: 12
+      width: 20
+      height: 20
       resolution: 0.05
 
-      plugins: ["potholes", "inflation_layer"]
+      plugins: ["potholes", "lidar_obstacles", "inflation_layer"]
+
+      lidar_obstacles:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: true
+        observation_sources: scan
+        combination_method: 1          # max
+        track_unknown_space: false
+
+        scan:
+          topic: /scan
+          data_type: "LaserScan"
+          marking: true
+          clearing: true               # IMPORTANT for barrels (raytracing clears behind)
+          obstacle_range: 12.0         # how far to mark obstacles
+          raytrace_range: 15.0         # how far to clear free space
+
+          min_obstacle_height: 0.0
+          max_obstacle_height: 1.5     # barrels are ~0.9m, lidar is at 0.8128m
+
+          inf_is_valid: false
+
+          observation_persistence: 0.2
+          expected_update_rate: 10.0
 
       potholes:
         plugin: "nav2_costmap_2d::ObstacleLayer"
@@ -171,8 +197,33 @@ global_costmap:
       resolution: 0.05
       update_frequency: 2.0
       publish_frequency: 1.0
-      robot_radius: 0.45
-      plugins: ["inflation_layer"]
+      footprint: "[[-0.5, -0.35], [0.5, -0.35], [0.5, 0.35], [-0.5, 0.35]]" # more accurate than huge radius
+      footprint_padding: 0.03
+# (and remove robot_radius)
+      #robot_radius: 0.45
+      plugins: ["lidar_obstacles","inflation_layer"]
+
+      transform_tolerance: 0.2
+
+      lidar_obstacles:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: true
+        observation_sources: scan
+        combination_method: 1
+        track_unknown_space: false
+
+        scan:
+          topic: /scan
+          data_type: "LaserScan"
+          marking: true
+          clearing: true
+          obstacle_range: 15.0
+          raytrace_range: 18.0
+          min_obstacle_height: 0.0
+          max_obstacle_height: 1.5
+          observation_persistence: 0.2
+          expected_update_rate: 10.0
+          inf_is_valid: false
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
