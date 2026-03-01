@@ -20,7 +20,7 @@ controller_server:
       time_steps: 56
       model_dt: 0.05
       batch_size: 2000
-      iteration_count: 1
+      iteration_count: 1 # controls how many iterations of paths it explores
 
       # Limits for pavbot
       vx_max: 1.5 # 3.35 mph
@@ -42,10 +42,10 @@ controller_server:
       ObstaclesCritic:
         enabled: true
         cost_power: 1
-        repulsion_weight: 15.0 # more keep away
-        critical_weight: 120.0
+        repulsion_weight: 22.0 # more keep away
+        critical_weight: 170.0
         collision_cost: 100000.0
-        collision_margin_distance: 0.55
+        collision_margin_distance: 0.75
 
       # How hard do I follow centerline???
       PathAlignCritic:
@@ -115,7 +115,7 @@ local_costmap:
       update_frequency: 10.0
       publish_frequency: 5.0
       footprint: "[[-0.5, -0.35], [0.5, -0.35], [0.5, 0.35], [-0.5, 0.35]]"
-      footprint_padding: 0.1
+      footprint_padding: 0.18
 # (and remove robot_radius)
       #robot_radius: 0.45
       always_send_full_costmap: true
@@ -182,8 +182,8 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
-        inflation_radius: 1.0      # pothole_radius (0.3048) + safety margin + half footprint-ish
-        cost_scaling_factor: 1.0
+        inflation_radius: 1.1      # for both barrels and potholes
+        cost_scaling_factor: 0.6 # keep from cutting back early the lower it is
 
 
 global_costmap:
