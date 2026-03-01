@@ -47,17 +47,18 @@ controller_server:
         collision_cost: 100000.0
         collision_margin_distance: 0.55
 
+      # How hard do I follow centerline???
       PathAlignCritic:
         enabled: true
-        weight: 10.0
+        weight: 3.0
 
       PathFollowCritic:
         enabled: true
-        weight: 15.0
+        weight: 4.0
 
       GoalCritic:
         enabled: true
-        weight: 8.0
+        weight: 6.0
 
 
 velocity_smoother:
@@ -114,7 +115,7 @@ local_costmap:
       update_frequency: 10.0
       publish_frequency: 5.0
       footprint: "[[-0.5, -0.35], [0.5, -0.35], [0.5, 0.35], [-0.5, 0.35]]"
-      footprint_padding: 0.2
+      footprint_padding: 0.1
 # (and remove robot_radius)
       #robot_radius: 0.45
       always_send_full_costmap: true
@@ -181,8 +182,8 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
-        inflation_radius: 0.6      # pothole_radius (0.3048) + safety margin + half footprint-ish
-        cost_scaling_factor: 2.0
+        inflation_radius: 1.0      # pothole_radius (0.3048) + safety margin + half footprint-ish
+        cost_scaling_factor: 1.0
 
 
 global_costmap:
