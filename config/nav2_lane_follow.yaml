@@ -20,7 +20,7 @@ controller_server:
       time_steps: 56
       model_dt: 0.05
       batch_size: 2000
-      iteration_count: 1 # controls how many iterations of paths it explores
+      iteration_count: 2 # controls how many iterations of paths it explores
 
       # Limits for pavbot
       vx_max: 1.5 # 3.35 mph
@@ -114,8 +114,8 @@ local_costmap:
     ros__parameters:
       update_frequency: 10.0
       publish_frequency: 5.0
-      footprint: "[[-0.5, -0.35], [0.5, -0.35], [0.5, 0.35], [-0.5, 0.35]]"
-      footprint_padding: 0.18
+      footprint: "[[-0.85, -0.70], [0.50, -0.70], [0.50, 0.70], [-0.85, 0.70]]"
+      footprint_padding: 0.05
 # (and remove robot_radius)
       #robot_radius: 0.45
       always_send_full_costmap: true
@@ -135,7 +135,7 @@ local_costmap:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: true
         observation_sources: scan
-        combination_method: 1          # max
+        combination_method: 1 # max
         track_unknown_space: false
 
         scan:
@@ -169,7 +169,7 @@ local_costmap:
           marking: true
           clearing: false        
 
-          obstacle_range: 20.0      # <-- IMPORTANT (accept marking out to 20m)
+          obstacle_range: 10.0      # <-- IMPORTANT (accept marking out to 20m)
           raytrace_range: 0.0       # clearing off anyway; ok to set 0
 
           min_obstacle_height: -1.0
@@ -182,8 +182,8 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
-        inflation_radius: 1.1      # for both barrels and potholes
-        cost_scaling_factor: 0.6 # keep from cutting back early the lower it is
+        inflation_radius: 1.0 # for both barrels and potholes
+        cost_scaling_factor: 3.0 # keep from cutting back early the lower it is
 
 
 global_costmap:
