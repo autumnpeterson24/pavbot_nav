@@ -19,8 +19,8 @@ controller_server:
       # Timing / rollout
       time_steps: 56
       model_dt: 0.05
-      batch_size: 2000
-      iteration_count: 2 # controls how many iterations of paths it explores
+      batch_size: 1000
+      iteration_count: 1 # controls how many iterations of paths it explores
 
       # Limits for pavbot
       vx_max: 1.5 # 3.35 mph
@@ -45,7 +45,7 @@ controller_server:
         repulsion_weight: 22.0 # more keep away
         critical_weight: 170.0
         collision_cost: 100000.0
-        collision_margin_distance: 0.75
+        collision_margin_distance: 0.1
 
       # How hard do I follow centerline???
       PathAlignCritic:
@@ -114,7 +114,7 @@ local_costmap:
     ros__parameters:
       update_frequency: 10.0
       publish_frequency: 5.0
-      footprint: "[[-0.85, -0.70], [0.50, -0.70], [0.50, 0.70], [-0.85, 0.70]]"
+      footprint: "[[-0.5, -0.35], [0.5, -0.35], [0.5, 0.35], [-0.5, 0.35]]"
       footprint_padding: 0.05
 # (and remove robot_radius)
       #robot_radius: 0.45
@@ -151,7 +151,7 @@ local_costmap:
 
           inf_is_valid: false
 
-          observation_persistence: 0.2
+          observation_persistence: 0.0
           expected_update_rate: 10.0
 
       potholes:
@@ -183,7 +183,7 @@ local_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
         inflation_radius: 1.0 # for both barrels and potholes
-        cost_scaling_factor: 3.0 # keep from cutting back early the lower it is
+        cost_scaling_factor: 5.0 # keep from cutting back early the lower it is
 
 
 global_costmap:
