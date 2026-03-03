@@ -183,7 +183,7 @@ local_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
         inflation_radius: 1.0 # for both barrels and potholes
-        cost_scaling_factor: 5.0 # keep from cutting back early the lower it is
+        cost_scaling_factor: 9.0 # keep from cutting back early the lower it is
 
 
 global_costmap:
