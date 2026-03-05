@@ -23,7 +23,7 @@ controller_server:
       iteration_count: 1 # controls how many iterations of paths it explores
 
       # Limits for pavbot
-      vx_max: 1.5 # 3.35 mph
+      vx_max: 1.8 # 3.35 mph
       vx_min: -0.2 # can back up now
       wz_max: 2.2
 
