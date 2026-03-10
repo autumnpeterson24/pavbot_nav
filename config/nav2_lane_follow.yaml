@@ -114,8 +114,8 @@ local_costmap:
     ros__parameters:
       update_frequency: 10.0
       publish_frequency: 5.0
-      footprint: "[[-0.5, -0.35], [0.5, -0.35], [0.5, 0.35], [-0.5, 0.35]]"
-      footprint_padding: 0.05
+      footprint: "[[-0.56, -0.335], [0.56, -0.335], [0.56, 0.335], [-0.56, 0.335]]"
+      footprint_padding: 0.03
 # (and remove robot_radius)
       #robot_radius: 0.45
       always_send_full_costmap: true
