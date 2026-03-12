@@ -1,0 +1,55 @@
+corridor_path_builder:
+  ros__parameters:
+    use_sim_time: true
+
+    left_boundary_topic: /lanes/left_boundary
+    right_boundary_topic: /lanes/right_boundary
+    lane_confidence_topic: /lanes/confidence
+    scan_topic: /scan
+    output_path_topic: /corridor/path
+    output_mode_topic: /corridor/mode
+    base_frame: base_link
+
+    path_min_x_m: 0.8
+    path_max_x_m: 2.2
+    path_sample_dx_m: 0.25
+
+    nominal_half_width_m: 1.5
+    auto_learn_half_width: false
+    half_width_learn_alpha: 0.95
+    half_width_min_m: 1.2
+    half_width_max_m: 1.8
+
+    path_smooth_alpha: 0.88
+    yaw_smooth_alpha: 0.82
+    path_hold_sec: 1.0
+
+    min_confidence_dual_wall: 0.60
+    min_confidence_single_wall: 0.35
+
+    min_boundary_points: 3
+    boundary_stale_sec: 0.35
+    scan_stale_sec: 0.25
+    max_center_abs_y_m: 0.45
+    max_interp_gap_m: 0.6
+
+    lidar_x_in_base_m: 0.60
+    lidar_y_in_base_m: 0.0
+
+    scan_range_min_use_m: 0.20
+    scan_range_max_use_m: 8.0
+    scan_min_x_m: 0.40
+    scan_max_x_m: 4.0
+    scan_max_abs_y_m: 3.0
+
+    obstacle_slice_half_width_m: 0.50
+    obstacle_influence_radius_m: 0.80
+    obstacle_repulsion_gain: 0.20
+    max_obstacle_bias_per_sample_m: 0.20
+
+    open_forward_nominal_y_m: 0.0
+    open_forward_last_y_blend: 0.75
+    open_forward_smoothing_alpha: 0.85
+
+    publish_rate_hz: 10.0
+    debug_print_hz: 1.0
