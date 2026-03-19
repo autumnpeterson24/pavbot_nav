@@ -1,0 +1,47 @@
+guidance_path_builder:
+  ros__parameters:
+    use_sim_time: true
+
+    robot_frame: "base_link"
+
+    guidance_topic: "/guidance/path"
+    mode_topic: "/guidance/mode"
+
+    centerline_topic: "/lanes/centerline"
+    left_boundary_topic: "/lanes/left_boundary"
+    right_boundary_topic: "/lanes/right_boundary"
+    lane_confidence_topic: "/lanes/confidence"
+    scan_topic: "/scan"
+
+    publish_hz: 10.0
+    path_stale_sec: 0.40
+
+    min_centerline_points: 5
+    min_boundary_points: 5
+
+    lane_confidence_threshold: 0.45
+
+    # Important for your 10–20 ft lane test world
+    nominal_half_width_m: 2.2
+
+    prefer_centerline_when_available: true
+
+    fallback_path_length_m: 8.0
+    fallback_point_spacing_m: 0.5
+    fallback_max_heading_deg: 70.0
+    fallback_heading_step_deg: 5.0
+    fallback_clearance_margin_m: 0.9
+    fallback_min_clear_range_m: 1.5
+    fallback_scan_cap_m: 12.0
+    fallback_heading_smooth_alpha: 0.85
+
+    smooth_output_path: true
+    path_smooth_alpha: 0.35
+
+    # NEW: mild turn-aware inside bias
+    enable_turn_inside_bias: true
+    turn_detect_lookahead_idx: 6.0
+    turn_detect_yaw_thresh_deg: 8.0
+    inside_bias_fraction: 0.14
+    inside_bias_max_m: 0.30
+    inside_bias_fade_length_m: 4.5

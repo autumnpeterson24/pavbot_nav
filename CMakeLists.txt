@@ -26,8 +26,8 @@ ament_target_dependencies(odom_tf_broadcaster
   tf2_ros
 )
 
-add_executable(centerline_nav2_autonomy src/centerline_nav2_autonomy.cpp)
-ament_target_dependencies(centerline_nav2_autonomy
+add_executable(guidance_nav2_autonomy src/guidance_nav2_autonomy.cpp)
+ament_target_dependencies(guidance_nav2_autonomy
   rclcpp
   std_srvs
   nav_msgs
@@ -38,31 +38,20 @@ ament_target_dependencies(centerline_nav2_autonomy
   nav2_msgs
 )
 
-add_executable(corridor_path_builder src/corridor_path_builder.cpp)
-ament_target_dependencies(corridor_path_builder
+add_executable(guidance_path_builder src/guidance_path_builder.cpp)
+ament_target_dependencies(guidance_path_builder
   rclcpp
   nav_msgs
   geometry_msgs
-  std_msgs
-  visualization_msgs
   sensor_msgs
+  std_msgs
 )
 
-add_executable(corridor_path_follower src/corridor_path_follower.cpp)
-ament_target_dependencies(corridor_path_follower
-  rclcpp
-  nav_msgs
-  geometry_msgs
-  std_msgs
-  std_srvs
-  visualization_msgs
-)
 
 install(TARGETS
   odom_tf_broadcaster
-  centerline_nav2_autonomy
-  corridor_path_builder
-  corridor_path_follower
+  guidance_path_builder
+  guidance_nav2_autonomy
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -39,7 +39,7 @@ def generate_launch_description():
     default_nav2_params = os.path.join(
         get_package_share_directory("pavbot_nav"),
         "config",
-        "nav2_lane_follow.yaml",
+        "guidance_nav2.yaml",
     )
 
     return LaunchDescription([
@@ -110,27 +110,42 @@ def generate_launch_description():
             }],
         ),
 
-        # --- 3) Centerline -> Nav2 goals ---
+        # --- 3) Guidance path builder ---
         Node(
             package="pavbot_nav",
-            executable="centerline_nav2_autonomy",
-            name="centerline_nav2_autonomy",
+            executable="guidance_path_builder",
+            name="guidance_path_builder",
             namespace=namespace,
             output="screen",
-            parameters=[{
-                "use_sim_time": use_sim_time,
-                "centerline_topic": "/lanes/centerline",
-                "global_frame": "odom",
-                "robot_frame": "base_link",
-                "lookahead_m": 7.0,
-                "goal_update_hz": 10.0,
-                "min_goal_separation_m": 1.0,
-                "path_stale_sec": 0.5,
-            }],
+            parameters=[
+                os.path.join(
+                    get_package_share_directory("pavbot_nav"),
+                    "config",
+                    "guidance_path_builder.yaml",
+                ),
+                {"use_sim_time": use_sim_time},
+            ],
+        ),
+
+        # --- 4) Guidance Autonomy -> Nav2 goals ---
+        Node(
+            package="pavbot_nav",
+            executable="guidance_nav2_autonomy",
+            name="guidance_nav2_autonomy",
+            namespace=namespace,
+            output="screen",
+            parameters=[
+                os.path.join(
+                    get_package_share_directory("pavbot_nav"),
+                    "config",
+                    "guidance_nav2_autonomy.yaml",
+                ),
+                {"use_sim_time": use_sim_time},
+            ],
             arguments=["--ros-args", "--log-level", log_level],
         ),
 
-        # --- 4) Nav2 bringup ---
+        # --- 5) Nav2 bringup ---
         # CRITICAL: only pass ONE params file
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(nav2_launch),

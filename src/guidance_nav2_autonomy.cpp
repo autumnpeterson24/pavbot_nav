@@ -23,19 +23,19 @@
 
 using namespace std::chrono_literals;
 
-class CenterlineNav2Autonomy : public rclcpp::Node
+class GuidanceNav2Autonomy : public rclcpp::Node
 {
 public:
   using NavigateToPose = nav2_msgs::action::NavigateToPose;
   using GoalHandleNav = rclcpp_action::ClientGoalHandle<NavigateToPose>;
 
-  CenterlineNav2Autonomy()
-  : Node("centerline_nav2_autonomy"),
+  GuidanceNav2Autonomy()
+  : Node("guidance_nav2_autonomy"),
     tf_buffer_(this->get_clock()),
     tf_listener_(tf_buffer_)
   {
     // Parameters
-    this->declare_parameter<std::string>("centerline_topic", "/lanes/centerline");
+    this->declare_parameter<std::string>("guidance_topic", "/guidance/path");
     this->declare_parameter<std::string>("global_frame", "odom");
     this->declare_parameter<std::string>("robot_frame", "base_link");
     this->declare_parameter<double>("lookahead_m", 4.0);
@@ -61,7 +61,7 @@ public:
 
 
 
-    centerline_topic_ = this->get_parameter("centerline_topic").as_string();
+    guidance_topic_ = this->get_parameter("guidance_topic").as_string();
     global_frame_ = this->get_parameter("global_frame").as_string();
     robot_frame_ = this->get_parameter("robot_frame").as_string();
     lookahead_m_ = this->get_parameter("lookahead_m").as_double();
@@ -82,8 +82,8 @@ public:
 
     // Sub to centerline path
     path_sub_ = this->create_subscription<nav_msgs::msg::Path>(
-      centerline_topic_, rclcpp::QoS(10),
-      std::bind(&CenterlineNav2Autonomy::onPath, this, std::placeholders::_1));
+      guidance_topic_, rclcpp::QoS(10),
+      std::bind(&GuidanceNav2Autonomy::onPath, this, std::placeholders::_1));
 
     // Nav2 action client
     nav_client_ = rclcpp_action::create_client<NavigateToPose>(this, "navigate_to_pose");
@@ -91,15 +91,15 @@ public:
     // Enable/disable service
     srv_ = this->create_service<std_srvs::srv::SetBool>(
       "/autonomy/set_enabled",
-      std::bind(&CenterlineNav2Autonomy::onSetEnabled, this, std::placeholders::_1, std::placeholders::_2));
+      std::bind(&GuidanceNav2Autonomy::onSetEnabled, this, std::placeholders::_1, std::placeholders::_2));
 
     // Timer (does nothing unless enabled)
     const auto period = std::chrono::duration<double>(1.0 / std::max(0.1, goal_update_hz_));
     timer_ = this->create_wall_timer(
       std::chrono::duration_cast<std::chrono::milliseconds>(period),
-      std::bind(&CenterlineNav2Autonomy::tick, this));
+      std::bind(&GuidanceNav2Autonomy::tick, this));
 
-    RCLCPP_INFO(this->get_logger(), "Centerline autonomy node ready (idle). Use /autonomy/set_enabled.");
+    RCLCPP_INFO(this->get_logger(), "Guidance autonomy node ready (idle). Use /autonomy/set_enabled.");
   }
 
 private:
@@ -345,7 +345,7 @@ private:
   }
 
   // Params
-  std::string centerline_topic_;
+  std::string guidance_topic_;
   std::string global_frame_;
   std::string robot_frame_;
   double lookahead_m_{6.0};
@@ -401,7 +401,7 @@ private:
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<CenterlineNav2Autonomy>());
+  rclcpp::spin(std::make_shared<GuidanceNav2Autonomy>());
   rclcpp::shutdown();
   return 0;
 }
