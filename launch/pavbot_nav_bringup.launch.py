@@ -5,6 +5,8 @@ ros2 service call /autonomy/set_enabled std_srvs/srv/SetBool "{data: true}"
 RUN RVIZ WITH THIS:
 ros2 run rviz2 rviz2 --ros-args -p use_sim_time:=true
 
+Tag: V1.0 scitech
+
 """
 
 from launch import LaunchDescription
