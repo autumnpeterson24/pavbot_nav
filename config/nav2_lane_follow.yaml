@@ -116,10 +116,7 @@ local_costmap:
       publish_frequency: 5.0
       footprint: "[[-0.56, -0.335], [0.56, -0.335], [0.56, 0.335], [-0.56, 0.335]]"
       footprint_padding: 0.03
-# (and remove robot_radius)
-      #robot_radius: 0.45
       always_send_full_costmap: true
-      # (optional but nice)
       transform_tolerance: 0.2
       use_sim_time: true
       global_frame: odom
@@ -129,61 +126,51 @@ local_costmap:
       height: 20
       resolution: 0.05
 
-      plugins: ["potholes", "lidar_obstacles", "inflation_layer"]
+      plugins: ["obstacle_layer", "inflation_layer"]
 
-      lidar_obstacles:
+      obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: true
-        observation_sources: scan
-        combination_method: 1 # max
+        observation_sources: scan pothole_cloud
+        combination_method: 1
         track_unknown_space: false
+        footprint_clearing_enabled: false
 
         scan:
           topic: /scan
           data_type: "LaserScan"
           marking: true
-          clearing: true               # IMPORTANT for barrels (raytracing clears behind)
-          obstacle_range: 12.0         # how far to mark obstacles
-          raytrace_range: 15.0         # how far to clear free space
-
+          clearing: true
+          obstacle_max_range: 12.0
+          obstacle_min_range: 0.0
+          raytrace_max_range: 15.0
+          raytrace_min_range: 0.0
           min_obstacle_height: 0.0
-          max_obstacle_height: 1.5     # barrels are ~0.9m, lidar is at 0.8128m
-
+          max_obstacle_height: 1.5
           inf_is_valid: false
-
           observation_persistence: 0.0
           expected_update_rate: 10.0
 
-      potholes:
-        plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: true
-        observation_sources: pothole_cloud
-        combination_method: 1  # max
-        track_unknown_space: false
-
         pothole_cloud:
-          observation_persistence: 0.5   # seconds
-          expected_update_rate: 10.0
           topic: /potholes/points
           data_type: "PointCloud2"
           marking: true
-          clearing: false        
-
-          obstacle_range: 10.0      # <-- IMPORTANT (accept marking out to 20m)
-          raytrace_range: 0.0       # clearing off anyway; ok to set 0
-
+          clearing: false
+          obstacle_max_range: 10.0
+          obstacle_min_range: 0.0
+          raytrace_max_range: 0.0
+          raytrace_min_range: 0.0
           min_obstacle_height: -1.0
-          max_obstacle_height:  0.5
-
+          max_obstacle_height: 1.0
           inf_is_valid: false
-          max_z: 0.5
-          min_z: -0.1
+          observation_persistence: 0.75
+          expected_update_rate: 0.0
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
-        inflation_radius: 1.0 # for both barrels and potholes
-        cost_scaling_factor: 9.0 # keep from cutting back early the lower it is
+        inflation_radius: 1.0
+        cost_scaling_factor: 9.0
 
 
 global_costmap:
