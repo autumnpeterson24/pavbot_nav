@@ -47,11 +47,19 @@ ament_target_dependencies(guidance_path_builder
   std_msgs
 )
 
+add_executable(guidance_cmd_vel_follower src/guidance_cmd_vel_follower.cpp)
+ament_target_dependencies(guidance_cmd_vel_follower
+  rclcpp
+  nav_msgs
+  geometry_msgs
+  std_msgs
+)
 
 install(TARGETS
   odom_tf_broadcaster
   guidance_path_builder
   guidance_nav2_autonomy
+  guidance_cmd_vel_follower
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -2,12 +2,13 @@
 LAUNCH:
 ros2 service call /autonomy/set_enabled std_srvs/srv/SetBool "{data: true}"
 
-RUN RVIZ WITH THIS:
-ros2 run rviz2 rviz2 --ros-args -p use_sim_time:=true
 
 *** MAKE SURE THAT PORTS HAVE PERMISSION: 
 ls /dev/ttyUSB*
 sudo chmod 777 /dev/ttyUSB0
+
+*** GREAT FOR SEEING MESSAGES IN DEBUG:
+ros2 topic echo /rosout | egrep 'name: guidance_nav2_autonomy|msg:'
 
 """
 
@@ -32,23 +33,26 @@ def generate_launch_description():
     use_respawn     = LaunchConfiguration("use_respawn")
 
     # Paths
-    sim_pkg = get_package_share_directory("pavbot_sim_gz")
-    sim_launch = os.path.join(sim_pkg, "launch", "sim_bringup.launch.py")
+    # DO NOT NEED SIM FOR REAL !!!!!!!!!!!!
+    #sim_pkg = get_package_share_directory("pavbot_sim_gz")
+    #sim_launch = os.path.join(sim_pkg, "launch", "sim_bringup.launch.py")
 
     nav2_pkg = get_package_share_directory("nav2_bringup")
     nav2_launch = os.path.join(nav2_pkg, "launch", "navigation_launch.py")
 
+
     default_nav2_params = os.path.join(
         get_package_share_directory("pavbot_nav"),
         "config",
-        "sim_guidance_nav2.yaml",
+        "guidance_nav2.yaml",
     )
 
+
     return LaunchDescription([
-        # --- Arguments ---
+        # args
         DeclareLaunchArgument(
             "use_sim_time",
-            default_value="true",
+            default_value="false", # FALSE FOR REAL LIFE
             description="Use simulation time",
         ),
         DeclareLaunchArgument(
@@ -87,15 +91,16 @@ def generate_launch_description():
             description="log level",
         ),
 
-        # --- 1) Sim bringup ---
-        # IMPORTANT: pass use_sim_time + namespace through so sim + nodes line up.
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(sim_launch),
-            launch_arguments={
-                "use_sim_time": use_sim_time,
-                "namespace": namespace,
-            }.items(),
-        ),
+        # FROM ORIGINAL SIM
+        # # --- 1) Sim bringup ---
+        # # IMPORTANT: pass use_sim_time + namespace through so sim + nodes line up.
+        # IncludeLaunchDescription(
+        #     PythonLaunchDescriptionSource(sim_launch),
+        #     launch_arguments={
+        #         "use_sim_time": use_sim_time,
+        #         "namespace": namespace,
+        #     }.items(),
+        # ),
 
         # --- 2) TF from /odom --- CHANGE TO BE LIDAR
         # Node(
@@ -112,7 +117,7 @@ def generate_launch_description():
         #     }],
         # ),
 
-        # --2) NEW LASER ODOM
+        # NEW LASER ODOM to publish TF =======
         Node(
             package="rf2o_laser_odometry",
             executable="rf2o_laser_odometry_node",
@@ -120,8 +125,8 @@ def generate_launch_description():
             output="screen",
             parameters=[{
                 "use_sim_time": use_sim_time,
-                "laser_scan_topic": "/scan",
-                "odom_topic": "/odom_rf2o",
+                "laser_scan_topic": "/filtered_scan",
+                "odom_topic": "/odom",
                 "base_frame_id": "base_link",
                 "odom_frame_id": "odom",
                 "publish_tf": True,
@@ -130,7 +135,7 @@ def generate_launch_description():
             }],
         ),
 
-        # --- 3) Guidance path builder ---
+        # Guidance path builder ========
         Node(
             package="pavbot_nav",
             executable="guidance_path_builder",
@@ -147,7 +152,7 @@ def generate_launch_description():
             ],
         ),
 
-        # --- 4) Guidance Autonomy -> Nav2 goals ---
+        # Guidance Autonomy -> Nav2 goals =========
         Node(
             package="pavbot_nav",
             executable="guidance_nav2_autonomy",
@@ -165,7 +170,7 @@ def generate_launch_description():
             arguments=["--ros-args", "--log-level", log_level],
         ),
 
-        # --- 5) Nav2 bringup ---
+        # Nav2 bringup ================
         # CRITICAL: only pass ONE params file
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(nav2_launch),

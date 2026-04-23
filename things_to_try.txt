@@ -1,0 +1,67 @@
+1. CHECK Path is not "stale":
+ros2 topic hz /guidance/path
+ros2 topic echo /guidance/path --once
+
+2. Make sure robot is not blocked by anything in costmap
+
+
+
+WHAT WAS WRONG:
+
+What was going wrong was not Nav2 itself. Nav2 was healthy the whole time.
+
+You proved that in two ways:
+
+guidance_nav2_autonomy was an action client to /navigate_to_pose, and bt_navigator was the action server. The controller server was also ready to publish /cmd_vel_nav.
+When you sent a manual NavigateToPose goal, cmd_vel streamed, which means the Nav2 controller/smoother pipeline was fine.
+
+***The real failure was in the handoff from your guidance path to a Nav2 goal.
+
+Your /guidance/path was being published in the base_link frame, while Nav2 was operating in odom.
+So guidance_nav2_autonomy had to take a lookahead pose from that base_link path and transform it into odom before sending it to Nav2.
+
+In the old code, it did this:
+
+pickLookaheadPose() chose a pose from the path and stamped it with this->now()
+then tick() called tf_buffer_.transform(*goal_in_path_frame, global_frame_, ...) on that freshly stamped pose.
+
+That was the bug.
+
+Because the pose was stamped at “right now,” TF tried to find a transform for that exact timestamp. On the real robot, the TF buffer was slightly behind, so the lookup failed with:
+
+***“TF transform failed: Lookup would require extrapolation into the future.”
+
+So the failure chain was:
+
+guidance path exists → lookahead pose chosen → pose stamped with now() → TF asks for transform at a time newer than latest TF → transform fails → no valid goal reaches Nav2 → no cmd_vel.
+
+You also had a secondary timing issue making this worse:
+
+/filtered_scan was going stale
+message filters were dropping LiDAR messages
+you also saw Centerline path stale (age=0.32s) in the logs.
+
+So the autonomy node was getting hit from both sides:
+
+TF too old for the timestamp it requested
+and some sensor/costmap timing jitter in the rest of the stack
+
+The fix worked because you changed the transform logic to this:
+
+set the local goal stamp to zero time
+transform using the latest available TF
+then stamp the transformed odom goal with now() before sending it to Nav2.
+
+That changed the meaning from:
+
+“Transform this pose at this exact fresh timestamp”
+
+to:
+
+“Use the latest available base_link -> odom transform, then send the resulting goal now.”
+
+That is why it started working.
+
+So the short diagnosis is:
+
+The goals were failing because guidance_nav2_autonomy was time-stamping the lookahead pose too aggressively before TF conversion, and TF on the real robot could not satisfy that exact timestamp. Nav2 was fine; the transform step before goal submission was the broken part.

@@ -207,13 +207,21 @@ private:
       return;
     }
 
-    // Transform goal into global_frame for Nav2
+    // Transform goal into global_frame for Nav2 using latest available TF
+    geometry_msgs::msg::PoseStamped goal_local = *goal_in_path_frame;
+    goal_local.header.stamp = rclcpp::Time(0, 0, this->get_clock()->get_clock_type());
+
     geometry_msgs::msg::PoseStamped goal_global;
     try {
-      goal_global = tf_buffer_.transform(*goal_in_path_frame, global_frame_, tf2::durationFromSec(0.05));
+      goal_global = tf_buffer_.transform(
+        goal_local,
+        global_frame_,
+        tf2::durationFromSec(0.1));
+      goal_global.header.stamp = this->now();
+      goal_global.header.frame_id = global_frame_;
     } catch (const tf2::TransformException & ex) {
       RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-                           "TF transform failed: %s", ex.what());
+                          "TF transform failed: %s", ex.what());
       return;
     }
 
@@ -256,7 +264,7 @@ private:
       }
 
       auto goal = path.poses[chosen];
-      goal.header.stamp = this->now();
+      goal.header.stamp = rclcpp::Time(0, 0, this->get_clock()->get_clock_type());
 
       if (!use_tangent_orientation_) {
         // leave orientation as-is (though your lane detector publishes identity)

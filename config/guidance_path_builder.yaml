@@ -1,6 +1,6 @@
 guidance_path_builder:
   ros__parameters:
-    use_sim_time: true
+    use_sim_time: false
 
     robot_frame: "base_link"
 
@@ -11,7 +11,7 @@ guidance_path_builder:
     left_boundary_topic: "/lanes/left_boundary"
     right_boundary_topic: "/lanes/right_boundary"
     lane_confidence_topic: "/lanes/confidence"
-    scan_topic: "/scan"
+    scan_topic: "/filtered_scan"
 
     publish_hz: 10.0
     path_stale_sec: 0.40
@@ -19,20 +19,20 @@ guidance_path_builder:
     min_centerline_points: 5
     min_boundary_points: 5
 
-    lane_confidence_threshold: 0.45
+    lane_confidence_threshold: 0.20
 
     # Important for your 10–20 ft lane test world
     nominal_half_width_m: 2.2
 
     prefer_centerline_when_available: true
 
-    fallback_path_length_m: 8.0
-    fallback_point_spacing_m: 0.5
-    fallback_max_heading_deg: 70.0
+    fallback_path_length_m: 3.0
+    fallback_point_spacing_m: 0.25
+    fallback_max_heading_deg: 45.0
     fallback_heading_step_deg: 5.0
-    fallback_clearance_margin_m: 0.9
-    fallback_min_clear_range_m: 1.5
-    fallback_scan_cap_m: 12.0
+    fallback_clearance_margin_m: 0.6
+    fallback_min_clear_range_m: 1.0
+    fallback_scan_cap_m: 6.0
     fallback_heading_smooth_alpha: 0.85
 
     smooth_output_path: true

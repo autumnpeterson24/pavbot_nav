@@ -1,6 +1,6 @@
 bt_navigator:
   ros__parameters:
-    use_sim_time: false
+    use_sim_time: true
     global_frame: odom
     robot_base_frame: base_link
     odom_frame: odom
@@ -8,7 +8,7 @@ bt_navigator:
 
 controller_server:
   ros__parameters:
-    use_sim_time: false
+    use_sim_time: true
     controller_frequency: 20.0
     cmd_vel_topic: "cmd_vel_nav"
 
@@ -23,13 +23,13 @@ controller_server:
       iteration_count: 1 # controls how many iterations of paths it explores
 
       # Limits for pavbot
-      vx_max: 0.30 # originally 0.3
-      vx_min: -0.1 # can back up now
-      wz_max: 0.20 # originally 0.25
+      vx_max: 0.4 # 3.35 mph
+      vx_min: -0.2 # can back up now
+      wz_max: 1.0
 
       # Noise (bigger = explores more)
-      vx_std: 0.25
-      wz_std: 0.5
+      vx_std: 0.35
+      wz_std: 0.8
 
       # Critics = how it scores trajectories
       critics: ["ConstraintCritic", "ObstaclesCritic", "PathAlignCritic", "PathFollowCritic", "GoalCritic"]
@@ -42,28 +42,28 @@ controller_server:
       ObstaclesCritic:
         enabled: true
         cost_power: 1
-        repulsion_weight: 10.0 # more keep away 22.0
-        critical_weight: 100.0 # 170.0 critical weight original
+        repulsion_weight: 22.0 # more keep away
+        critical_weight: 170.0
         collision_cost: 100000.0
-        collision_margin_distance: 0.05 # originally 0.1
+        collision_margin_distance: 0.1
 
       # How hard do I follow centerline???
       PathAlignCritic:
         enabled: true
-        weight: 2.0 # orig 3.0
+        weight: 3.0
 
       PathFollowCritic:
         enabled: true
-        weight: 5.0 # orig 4.0
+        weight: 4.0
 
       GoalCritic:
         enabled: true
-        weight: 4.0 # orig 6.0
+        weight: 6.0
 
 
 velocity_smoother:
   ros__parameters:
-    use_sim_time: false
+    use_sim_time: true
 
     # Smoother subscribes to controller output...
     input_topic: "cmd_vel_nav"
@@ -74,10 +74,10 @@ velocity_smoother:
     feedback: "OPEN_LOOP"
 
     # Limits (tune later)
-    max_velocity: [0.4, 0.0, 0.5]
-    min_velocity: [-0.1, 0.0, -0.5] # changed from -1.5
-    max_accel: [1.0, 0.0, 1.5]
-    max_decel: [-1.0, 0.0, -1.5]
+    max_velocity: [1.9, 0.0, 1.9]
+    min_velocity: [-0.1, 0.0, -1.5]
+    max_accel: [1.0, 0.0, 2.0]
+    max_decel: [-1.0, 0.0, -2.0]
     odom_topic: "/odom"
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
@@ -85,7 +85,7 @@ velocity_smoother:
 
 planner_server:
   ros__parameters:
-    use_sim_time: false
+    use_sim_time: true
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
@@ -95,7 +95,7 @@ planner_server:
 
 behavior_server:
   ros__parameters:
-    use_sim_time: false
+    use_sim_time: true
     global_frame: odom
     robot_base_frame: base_link
     odom_frame: odom
@@ -117,8 +117,8 @@ local_costmap:
       footprint: "[[-0.56, -0.335], [0.56, -0.335], [0.56, 0.335], [-0.56, 0.335]]"
       footprint_padding: 0.03
       always_send_full_costmap: true
-      transform_tolerance: 0.35
-      use_sim_time: false
+      transform_tolerance: 0.2
+      use_sim_time: true
       global_frame: odom
       robot_base_frame: base_link
       rolling_window: true
@@ -131,13 +131,13 @@ local_costmap:
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: true
-        observation_sources: filtered_scan pothole_cloud
+        observation_sources: scan pothole_cloud
         combination_method: 1
         track_unknown_space: false
-        footprint_clearing_enabled: false # ORIGINAL false
+        footprint_clearing_enabled: false
 
-        filtered_scan:
-          topic: /filtered_scan
+        scan:
+          topic: /scan
           data_type: "LaserScan"
           marking: true
           clearing: true
@@ -148,7 +148,7 @@ local_costmap:
           min_obstacle_height: 0.0
           max_obstacle_height: 1.5
           inf_is_valid: false
-          observation_persistence: 1.0
+          observation_persistence: 0.0
           expected_update_rate: 10.0
 
         pothole_cloud:
@@ -163,20 +163,20 @@ local_costmap:
           min_obstacle_height: -1.0
           max_obstacle_height: 1.0
           inf_is_valid: false
-          observation_persistence: 1.00
+          observation_persistence: 3.00
           expected_update_rate: 10.0
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
-        inflation_radius: 1.25 # ORIGNAL 1.0 , 0.45 much better for real life
-        cost_scaling_factor: 9.0 # orig. 9.0
+        inflation_radius: 1.0
+        cost_scaling_factor: 9.0
 
 
 global_costmap:
   global_costmap:
     ros__parameters:
-      use_sim_time: false
+      use_sim_time: true
       global_frame: odom
       robot_base_frame: base_link
       rolling_window: true
@@ -196,34 +196,34 @@ global_costmap:
       lidar_obstacles:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: true
-        observation_sources: filtered_scan
+        observation_sources: scan
         combination_method: 1
         track_unknown_space: false
 
-        filtered_scan:
-          topic: /filtered_scan
+        scan:
+          topic: /scan
           data_type: "LaserScan"
           marking: true
           clearing: true
           obstacle_range: 15.0
           raytrace_range: 18.0
           min_obstacle_height: 0.0
-          max_obstacle_height: 2.0
+          max_obstacle_height: 1.5
           observation_persistence: 0.2
           expected_update_rate: 10.0
           inf_is_valid: false
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.55
-        cost_scaling_factor: 2.5
+        inflation_radius: 0.45
+        cost_scaling_factor: 6.0
 
 
 
 
 lifecycle_manager_navigation:
   ros__parameters:
-    use_sim_time: false
+    use_sim_time: true
     autostart: true
     node_names:
       - controller_server

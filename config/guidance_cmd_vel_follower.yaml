@@ -1,0 +1,25 @@
+guidance_cmd_vel_follower:
+  ros__parameters:
+    use_sim_time: false
+
+    # Inputs
+    path_topic: "/lanes/centerline"
+    confidence_topic: "/lanes/confidence"
+
+    # Output
+    cmd_vel_topic: "/cmd_vel"
+
+    # Motion tuning
+    linear_speed: 0.20        # m/s
+    angular_gain: 1.5         # steering aggressiveness
+
+    # Safety / gating
+    min_confidence: 0.30
+    stop_on_low_confidence: true
+
+    # Path handling
+    lookahead_distance: 0.5   # meters
+    min_path_points: 5
+
+    # Behavior
+    max_angular_z: 1.5        # rad/s clamp
