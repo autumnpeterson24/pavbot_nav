@@ -1,3 +1,33 @@
+/*
+guidance_nav2_autonomy.cpp ===========================================
+
+* Author: Autumn Peterson for PAVBot Capstone Team, 2026
+* Purpose: Converts the generated guidance path into continuously updated
+           Nav2 NavigateToPose goals. This node acts as the autonomy bridge
+           between the local guidance path and the Nav2 navigation stack.
+
+* Subscribes to:
+  - /guidance/path (nav_msgs/msg/Path)
+      Local guidance path produced by guidance_path_builder
+
+* Provides Service:
+  - /autonomy/set_enabled (std_srvs/srv/SetBool)
+      Enables or disables autonomous goal streaming
+
+* Sends Action Goals To:
+  - /navigate_to_pose (nav2_msgs/action/NavigateToPose)
+      Nav2 action server used to move the robot toward the selected goal
+
+* Notes:
+  - Selects a lookahead pose along the guidance path.
+  - Transforms the selected goal into the Nav2 global frame, usually odom.
+  - Continuously streams updated Nav2 goals while autonomy is enabled.
+  - Uses tangent-based orientation so the robot faces along the path.
+  - Smooths yaw to reduce jitter from noisy path estimates.
+  - Rejects stale, short, or redundant paths/goals.
+=========================================================================
+*/
+
 #include <chrono>
 #include <cmath>
 #include <memory>
@@ -29,10 +59,20 @@ public:
   using NavigateToPose = nav2_msgs::action::NavigateToPose;
   using GoalHandleNav = rclcpp_action::ClientGoalHandle<NavigateToPose>;
 
-  GuidanceNav2Autonomy()
-  : Node("guidance_nav2_autonomy"),
-    tf_buffer_(this->get_clock()),
-    tf_listener_(tf_buffer_)
+  GuidanceNav2Autonomy(): Node("guidance_nav2_autonomy"), tf_buffer_(this->get_clock()),tf_listener_(tf_buffer_)
+    /*
+      Purpose: Initializes the Nav2 autonomy bridge, declares and loads
+              parameters, subscribes to the guidance path, creates the Nav2
+              action client, creates the enable/disable service, and starts
+              the periodic goal update timer.
+
+      Input(s):
+        * None directly. Uses ROS parameters for topics, frames, lookahead,
+          goal update behavior, path freshness, and yaw smoothing.
+
+      Output(s):
+        * None. Sets up ROS communication and Nav2 action interfaces.
+    */
   {
     // Parameters
     this->declare_parameter<std::string>("guidance_topic", "/guidance/path");
@@ -104,15 +144,36 @@ public:
 
 private:
 
-  static double wrapPi(double a)
-  {
+  static double wrapPi(double a){
+    /*
+      Purpose: Wraps an angle into the range [-pi, pi] for stable yaw error
+              calculations.
+
+      Input(s):
+        * double a:
+          Input angle in radians.
+
+      Output(s):
+        * double:
+          Wrapped angle in radians.
+    */
     while (a > M_PI) a -= 2.0 * M_PI;
     while (a < -M_PI) a += 2.0 * M_PI;
     return a;
   }
 
-  static geometry_msgs::msg::Quaternion quatFromYaw(double yaw)
-  {
+  static geometry_msgs::msg::Quaternion quatFromYaw(double yaw){
+    /*
+      Purpose: Converts a planar yaw angle into a ROS quaternion.
+
+      Input(s):
+        * double yaw:
+          Desired heading angle in radians.
+
+      Output(s):
+        * geometry_msgs::msg::Quaternion:
+          Quaternion representing roll = 0, pitch = 0, yaw = input yaw.
+    */
     tf2::Quaternion q;
     q.setRPY(0.0, 0.0, yaw);
     geometry_msgs::msg::Quaternion out;
@@ -124,6 +185,17 @@ private:
   }
 
   void onPath(const nav_msgs::msg::Path::SharedPtr msg) {
+    /*
+      Purpose: Receives the latest guidance path and stores it if it contains
+              enough points to be useful for lookahead goal selection.
+
+      Input(s):
+        * const nav_msgs::msg::Path::SharedPtr msg:
+          Incoming guidance path from guidance_path_builder.
+
+      Output(s):
+        * None. Updates the internally stored path and timestamp.
+    */
     // Ignore empty / too-short paths so we keep the last usable one briefly
     if ((int)msg->poses.size() < min_path_points_) {
       RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
@@ -136,10 +208,22 @@ private:
     last_path_time_ = this->now();
   }
 
-  void onSetEnabled(
-    const std::shared_ptr<std_srvs::srv::SetBool::Request> req,
-    std::shared_ptr<std_srvs::srv::SetBool::Response> res)
-  {
+  void onSetEnabled(const std::shared_ptr<std_srvs::srv::SetBool::Request> req, std::shared_ptr<std_srvs::srv::SetBool::Response> res) {
+    /*
+      Purpose: Enables or disables autonomous Nav2 goal streaming. When disabled,
+              the current Nav2 goal is cancelled.
+
+      Input(s):
+        * const std::shared_ptr<std_srvs::srv::SetBool::Request> req:
+          Service request where true enables autonomy and false disables it.
+
+        * std::shared_ptr<std_srvs::srv::SetBool::Response> res:
+          Service response containing success status and message.
+
+      Output(s):
+        * None. Updates enabled state and may cancel the current goal.
+    */
+
     if (req->data) {
       enabled_ = true;
       res->success = true;
@@ -154,8 +238,29 @@ private:
     }
   }
 
-  void tick()
-  {
+  void tick() {
+    /*
+      Purpose: Periodic autonomy loop that selects a lookahead goal from the
+              latest guidance path, transforms it into the Nav2 global frame,
+              and sends it to the Nav2 NavigateToPose action server.
+
+      Pipeline:
+        1. Return immediately if autonomy is disabled
+        2. Verify the Nav2 action server is available
+        3. Copy the latest stored guidance path
+        4. Reject missing, short, or stale paths
+        5. Select a lookahead pose along the path
+        6. Transform that pose into the Nav2 global frame
+        7. Suppress redundant goal updates
+        8. Rate-limit goal sending
+        9. Send the updated goal to Nav2
+
+      Input(s):
+        * None directly. Uses stored path, TF, Nav2 action client, and parameters.
+
+      Output(s):
+        * None. Sends NavigateToPose action goals when appropriate.
+    */
     if (!enabled_) {
       return;
     }
@@ -244,9 +349,23 @@ private:
     has_last_goal_ = true;
   }
 
-  std::optional<geometry_msgs::msg::PoseStamped> pickLookaheadPose(
-      const nav_msgs::msg::Path & path, double lookahead_m)
-    {
+  std::optional<geometry_msgs::msg::PoseStamped> pickLookaheadPose(const nav_msgs::msg::Path & path, double lookahead_m){
+    /*
+      Purpose: Selects a goal pose a specified distance ahead along the guidance
+              path and assigns an orientation aligned with the local path tangent.
+
+      Input(s):
+        * const nav_msgs::msg::Path& path:
+          Guidance path to sample.
+
+        * double lookahead_m:
+          Desired arc-length distance ahead of the robot for the goal.
+
+      Output(s):
+        * std::optional<geometry_msgs::msg::PoseStamped>:
+          Selected lookahead pose if the path is valid, otherwise nullopt.
+    */
+
       if (path.poses.size() < 3) return std::nullopt;
 
       // Walk along arc length to find the lookahead index
@@ -267,7 +386,7 @@ private:
       goal.header.stamp = rclcpp::Time(0, 0, this->get_clock()->get_clock_type());
 
       if (!use_tangent_orientation_) {
-        // leave orientation as-is (though your lane detector publishes identity)
+        // leave orientation as is (though lane detector publishes identity)
         return goal;
       }
 
@@ -316,9 +435,19 @@ private:
       return goal;
     }
 
+  void sendGoal(const geometry_msgs::msg::PoseStamped & goal) {
+    /*
+      Purpose: Sends a NavigateToPose action goal to Nav2 and stores the current
+              goal handle when accepted.
 
-  void sendGoal(const geometry_msgs::msg::PoseStamped & goal)
-  {
+      Input(s):
+        * const geometry_msgs::msg::PoseStamped& goal:
+          Goal pose in the Nav2 global frame.
+
+      Output(s):
+        * None. Asynchronously sends a goal to the Nav2 action server.
+    */
+
     NavigateToPose::Goal nav_goal;
     nav_goal.pose = goal;
 
@@ -343,8 +472,18 @@ private:
     nav_client_->async_send_goal(nav_goal, send_goal_options);
   }
 
-  void cancelCurrentGoal()
-  {
+  void cancelCurrentGoal() {
+    /*
+      Purpose: Cancels the active Nav2 goal if one exists and clears the stored
+              goal state.
+
+      Input(s):
+        * None.
+
+      Output(s):
+        * None. Sends an asynchronous cancel request to Nav2.
+    */
+
     if (current_goal_handle_) {
       nav_client_->async_cancel_goal(current_goal_handle_);
       current_goal_handle_.reset();
@@ -406,6 +545,7 @@ private:
   geometry_msgs::msg::PoseStamped last_goal_global_;
 };
 
+// MAIN ======================
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
