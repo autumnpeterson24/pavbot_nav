@@ -1,3 +1,4 @@
+
 guidance_path_builder:
   ros__parameters:
     use_sim_time: false
@@ -19,10 +20,10 @@ guidance_path_builder:
     min_centerline_points: 5
     min_boundary_points: 5
 
-    lane_confidence_threshold: 0.20
+    lane_confidence_threshold: 0.35
 
     # Important for your 10–20 ft lane test world
-    nominal_half_width_m: 2.2
+    nominal_half_width_m: 1.22
 
     prefer_centerline_when_available: true
 

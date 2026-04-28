@@ -21,7 +21,6 @@ guidance_nav2_autonomy:
     force_replan_if_goal_moves_m: 4.0
     goal_progress_timeout_sec: 3.0
 
-    # NEW: adaptive lookahead, but mild
     adaptive_lookahead_enabled: true
     min_lookahead_m: 1.5
     max_lookahead_m: 2.5
@@ -29,3 +28,36 @@ guidance_nav2_autonomy:
     curve_detect_idx_far: 7.0
     curve_slowdown_yaw_deg: 18.0
     curve_lookahead_alpha: 0.85
+
+
+# guidance_nav2_autonomy:
+#   ros__parameters:
+#     use_sim_time: false
+
+#     guidance_topic: "/guidance/path"
+#     global_frame: "odom"
+#     robot_frame: "base_link"
+
+#     lookahead_m: 2.0
+#     goal_update_hz: 10.0
+#     min_goal_separation_m: 0.2
+#     path_stale_sec: 0.60
+
+#     use_tangent_orientation: true
+#     yaw_smooth_alpha: 0.85
+#     min_tangent_norm: 1e-3
+
+#     min_path_points: 5
+#     min_goal_update_sec: 0.2
+#     replan_when_dist_to_goal_lt_m: 1.5
+#     force_replan_if_goal_moves_m: 4.0
+#     goal_progress_timeout_sec: 3.0
+
+#     # NEW: adaptive lookahead, but mild
+#     adaptive_lookahead_enabled: true
+#     min_lookahead_m: 1.5
+#     max_lookahead_m: 2.5
+#     curve_detect_idx_near: 2.0
+#     curve_detect_idx_far: 7.0
+#     curve_slowdown_yaw_deg: 18.0
+#     curve_lookahead_alpha: 0.85
