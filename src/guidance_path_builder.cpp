@@ -872,7 +872,7 @@ private:
         * std::optional<nav_msgs::msg::Path>:
           Valid fallback path if clearance is sufficient, otherwise nullopt.
     */
-    
+
     const double max_h = fallback_max_heading_deg_ * M_PI / 180.0;
     const double step_h = std::max(1.0, fallback_heading_step_deg_) * M_PI / 180.0;
 
@@ -1008,8 +1008,7 @@ private:
 };
 
 // MAIN =====================
-int main(int argc, char ** argv)
-{
+int main(int argc, char ** argv){
   rclcpp::init(argc, argv);
   rclcpp::spin(std::make_shared<GuidancePathBuilder>());
   rclcpp::shutdown();
